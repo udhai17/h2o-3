@@ -1,6 +1,7 @@
 package hex.tree;
 
 import hex.*;
+import hex.genmodel.GenModel;
 import water.*;
 import water.codegen.CodeGenerator;
 import water.codegen.CodeGeneratorPipeline;
@@ -89,6 +90,174 @@ public abstract class SharedTreeModel<M extends SharedTreeModel<M,P,O>, P extend
       }
     }
   }
+
+  @Override
+  public BigScore getBigScore(String[] domain, int nPredCols, double[] mean, boolean testHasWeights, boolean computeMetrics, boolean makePreds, Job j) {
+    return new BigScoreTrees(domain, nPredCols, mean, testHasWeights, computeMetrics, makePreds, j);
+  }
+
+  protected class BigScoreTrees extends BigScore {
+    BigScoreTrees(String[] domain, int nPredCols, double[] mean, boolean testHasWeights, boolean computeMetrics, boolean makePreds, Job j) {
+      super(domain, nPredCols, mean, testHasWeights, computeMetrics, makePreds, j);
+    }
+
+    @Override public void map( Chunk chks[], NewChunk cpreds[] ) {
+      if (isCancelled() || _j != null && _j.stop_requested()) return;
+      Chunk weightsChunk = _hasWeights && _computeMetrics ? chks[_output.weightsIdx()] : null;
+      Chunk offsetChunk = _output.hasOffset() ? chks[_output.offsetIdx()] : null;
+      Chunk responseChunk = null;
+      double [] tmp = new double[_output.nfeatures()];
+      float [] actual = null;
+      _mb = SharedTreeModel.this.makeMetricBuilder(_domain);
+      if (_computeMetrics) {
+        if (isSupervised()) {
+          actual = new float[1];
+          responseChunk = chks[_output.responseIdx()];
+        } else
+          actual = new float[chks.length];
+      }
+      double[] preds = _mb._work;  // Sized for the union of test and train classes
+      int len = chks[0]._len;
+
+      assert(_nPredCols >0);
+      double[][] predictions = new double[_nPredCols][len];
+
+      // pre-fill all weights upfront
+      double[] weights = null;
+      if (weightsChunk!=null) {
+        weights = new double[len];
+        weightsChunk.getDoubles(weights,0,len);
+      }
+      assert(_output.nfeatures() == tmp.length);
+
+//      final boolean rowMajor = true;
+      final boolean rowMajor = false;
+      if (rowMajor) {
+        // neg: fetch the same per-class tree for every row
+        // pos: low temporary storage overhead
+
+        // rows
+        for (int row = 0; row < len; row++) {
+          if (weights!=null && weights[row] == 0) continue;
+
+          // get data for this row
+          for( int i=0; i< tmp.length; i++ )
+            tmp[i] = chks[i].atd(row);
+
+          // trees
+          for( int tidx=0; tidx<_output._treeKeys.length; tidx++ ) {
+            Key[] keys = _output._treeKeys[tidx];
+            // classes
+            for (int c = 0; c < keys.length; c++) {
+              if (keys[c] != null) {
+                CompressedTree tr = DKV.getGet(keys[c]);
+                double pred = tr.score(tmp);
+                assert (!Double.isInfinite(pred));
+                predictions[keys.length == 1 ? 0 : c + 1][row] += pred;
+              }
+            }
+          }
+        }
+      } else {
+        // pos: fetch the same per-class tree only once
+        // neg: higher temporary storage overhead
+
+        double[][] features = new double[len][tmp.length];
+        for( int i=0; i< tmp.length; i++ )
+          for (int row = 0; row < len; row++)
+            features[row][i] = chks[i].atd(row);
+
+        // trees
+        for( int tidx=0; tidx<_output._treeKeys.length; tidx++ ) {
+          Key[] keys = _output._treeKeys[tidx];
+
+          // classes
+          for (int c = 0; c < keys.length; c++) {
+            if (keys[c] != null) {
+              CompressedTree tr = DKV.getGet(keys[c]);
+
+              // rows
+              for (int row = 0; row < len; row++) {
+                if (weights!=null && weights[row] == 0) continue;
+
+                // get data for this row
+                tmp = features[row];
+
+                double pred = tr.score(tmp);
+                assert (!Double.isInfinite(pred));
+                predictions[keys.length == 1 ? 0 : c + 1][row] += pred;
+              }
+            }
+          }
+        }
+      }
+
+      // Now fix-up and store the predictions per row
+      for (int row = 0; row < len; ++row) {
+        double weight = weights==null ? 1 : weights[row];
+        double offset = offsetChunk!=null?offsetChunk.atd(row):0;
+
+        for (int i=0;i<predictions.length;++i) {
+          preds[i] = predictions[i][row];
+        }
+
+        // GBM
+        if (_parms._distribution == Distribution.Family.bernoulli || _parms._distribution == Distribution.Family.modified_huber) {
+          double f = preds[1] + _output._init_f + offset; //Note: class 1 probability stored in preds[1] (since we have only one tree)
+          preds[2] = new Distribution(_parms).linkInv(f);
+          preds[1] = 1.0 - preds[2];
+        } else if (_parms._distribution == Distribution.Family.multinomial) { // Kept the initial prediction for binomial
+          if (_output.nclasses() == 2) { //1-tree optimization for binomial
+            preds[1] += _output._init_f + offset; //offset is not yet allowed, but added here to be future-proof
+            preds[2] = -preds[1];
+          }
+          hex.genmodel.GenModel.GBM_rescale(preds);
+        } else { //Regression
+          double f = preds[0] + _output._init_f + offset;
+          preds[0] = new Distribution(_parms).linkInv(f);
+        }
+        //END GBM
+
+        double [] scored = preds;
+        if (isSupervised()) {
+          // Correct probabilities obtained from training on oversampled data back to original distribution
+          // C.f. http://gking.harvard.edu/files/0s.pdf Eq.(27)
+          if (_output.isClassifier()) {
+            if (_parms._balance_classes)
+              GenModel.correctProbabilities(scored, _output._priorClassDist, _output._modelClassDist);
+
+            //FIXME
+            //FIXME
+            //TODO: Only fill tmp if there's tie breaking
+//            for( int i=0; i< tmp.length; i++ )
+//              tmp[i] = chks[i].atd(row);
+            //FIXME
+            //FIXME
+
+            //assign label at the very end (after potentially correcting probabilities)
+            scored[0] = hex.genmodel.GenModel.getPrediction(scored, _output._priorClassDist, tmp, defaultThreshold());
+          }
+        }
+
+        if (_computeMetrics) {
+          if (isSupervised()) {
+            actual[0] = (float) responseChunk.atd(row);
+          } else {
+            for (int i = 0; i < actual.length; ++i)
+              actual[i] = (float) chks[i].atd(row);
+          }
+          _mb.perRow(preds, actual, weight, offset, SharedTreeModel.this);
+        }
+        if (_makePreds) {
+          for (int c = 0; c < _nPredCols; c++)  // Output predictions; sized for train only (excludes extra test classes)
+            cpreds[c].addNum(scored[c]);
+        }
+      }
+
+      if ( _j != null) _j.update(1);
+    }
+  }
+
 
   @Override public ModelMetrics.MetricBuilder makeMetricBuilder(String[] domain) {
     switch(_output.getModelCategory()) {
