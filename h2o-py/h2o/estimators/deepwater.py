@@ -29,8 +29,8 @@ class H2ODeepWaterEstimator(H2OEstimator):
                       "keep_cross_validation_predictions", "keep_cross_validation_fold_assignment", "fold_assignment",
                       "fold_column", "response_column", "ignored_columns", "score_each_iteration",
                       "categorical_encoding", "overwrite_with_best_model", "epochs", "train_samples_per_iteration",
-                      "target_ratio_comm_to_comp", "seed", "rate", "rate_annealing", "momentum_start", "momentum_ramp",
-                      "momentum_stable", "distribution", "score_interval", "score_training_samples",
+                      "target_ratio_comm_to_comp", "seed", "learning_rate", "learning_rate_annealing", "momentum_start",
+                      "momentum_ramp", "momentum_stable", "distribution", "score_interval", "score_training_samples",
                       "score_validation_samples", "score_duty_cycle", "stopping_rounds", "stopping_metric",
                       "stopping_tolerance", "max_runtime_secs", "replicate_training_data", "single_node_mode",
                       "shuffle_training_data", "mini_batch_size", "clip_gradient", "network", "backend", "image_shape",
@@ -254,25 +254,25 @@ class H2ODeepWaterEstimator(H2OEstimator):
 
 
     @property
-    def rate(self):
+    def learning_rate(self):
         """float: Learning rate (higher => less stable, lower => slower convergence). (Default: 0.005)"""
-        return self._parms.get("rate")
+        return self._parms.get("learning_rate")
 
-    @rate.setter
-    def rate(self, rate):
-        assert_is_type(rate, None, numeric)
-        self._parms["rate"] = rate
+    @learning_rate.setter
+    def learning_rate(self, learning_rate):
+        assert_is_type(learning_rate, None, numeric)
+        self._parms["learning_rate"] = learning_rate
 
 
     @property
-    def rate_annealing(self):
+    def learning_rate_annealing(self):
         """float: Learning rate annealing: rate / (1 + rate_annealing * samples). (Default: 1e-06)"""
-        return self._parms.get("rate_annealing")
+        return self._parms.get("learning_rate_annealing")
 
-    @rate_annealing.setter
-    def rate_annealing(self, rate_annealing):
-        assert_is_type(rate_annealing, None, numeric)
-        self._parms["rate_annealing"] = rate_annealing
+    @learning_rate_annealing.setter
+    def learning_rate_annealing(self, learning_rate_annealing):
+        assert_is_type(learning_rate_annealing, None, numeric)
+        self._parms["learning_rate_annealing"] = learning_rate_annealing
 
 
     @property

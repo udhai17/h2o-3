@@ -103,7 +103,7 @@ public abstract class Model<M extends Model<M,P,O>, P extends Model.Parameters, 
     /** The short name, used in making Keys.  e.g. "GBM" */
     abstract public String algoName();
 
-    /** The pretty algo name for this Model (e.g., Gradient Boosting Method, rather than GBM).*/
+    /** The pretty algo name for this Model (e.g., Gradient Boosting Machine, rather than GBM).*/
     abstract public String fullName();
 
     /** The Java class name for this Model (e.g., hex.tree.gbm.GBM, rather than GBM).*/
@@ -873,7 +873,7 @@ public abstract class Model<M extends Model<M,P,O>, P extends Model.Parameters, 
             good++;
           }
         } else if( vec.isCategorical() ) {
-          throw new IllegalArgumentException("Test/Validation dataset has categorical column '"+names[i]+"' which is real-valued in the training data");
+//          throw new IllegalArgumentException("Test/Validation dataset has categorical column '"+names[i]+"' which is real-valued in the training data");
         } else {
           good++;      // Assumed compatible; not checking e.g. Strings vs UUID
         }
