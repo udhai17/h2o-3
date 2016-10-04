@@ -1083,6 +1083,7 @@ public class DataInfo extends Keyed<DataInfo> {
           row.binIds[row.nBins++] = cid;
         else if(_skipMissing) {
           row.predictors_bad = true;
+          continue;
         }
       }
     }

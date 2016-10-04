@@ -3,7 +3,6 @@ package hex.schemas;
 import hex.DataInfo;
 import hex.glrm.GLRM;
 import hex.glrm.GLRMModel.GLRMParameters;
-import hex.glrm.GlrmLoss;
 import hex.svd.SVDModel.SVDParameters;
 import water.api.API;
 import water.api.schemas3.ModelParametersSchemaV3;
@@ -53,13 +52,13 @@ public class GLRMV3 extends ModelBuilderSchema<GLRM,GLRMV3,GLRMV3.GLRMParameters
     public int k;
 
     @API(help = "Numeric loss function", values = { "Quadratic", "Absolute", "Huber", "Poisson", "Hinge", "Logistic", "Periodic" }, gridable = true) // TODO: pull out of enum class
-    public GlrmLoss loss;
+    public GLRMParameters.Loss loss;
 
     @API(help = "Categorical loss function", values = { "Categorical", "Ordinal" }, gridable = true) // TODO: pull out of categorical class
-    public GlrmLoss multi_loss;
+    public GLRMParameters.Loss multi_loss;
 
     @API(help = "Loss function by column (override)", values = { "Quadratic", "Absolute", "Huber", "Poisson", "Hinge", "Logistic", "Periodic", "Categorical", "Ordinal" }, gridable = true)
-    public GlrmLoss[] loss_by_col;
+    public GLRMParameters.Loss[] loss_by_col;
 
     @API(help = "Loss function by column index (override)")
     public int[] loss_by_col_idx;
