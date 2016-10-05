@@ -1068,21 +1068,20 @@ public class DataInfo extends Keyed<DataInfo> {
       }
       if(_weights) {
         rows[i].weight = chunks[weightChunkId()].atd(i);
-        if(Double.isNaN(rows[i].weight)) {
+        if(Double.isNaN(rows[i].weight))
           rows[i].predictors_bad = true;
-          continue;
-        }
       }
     }
     // categoricals
     for (int i = 0; i < _cats; ++i) {
       for (int r = 0; r < chunks[0]._len; ++r) {
         Row row = rows[r];
-        int cid = getCategoricalId(i,chunks[i].isNA(r)? _catNAFill[i]:(int)chunks[i].at8(r));
-        if(cid >=0)
-          row.binIds[row.nBins++] = cid;
-        else if(_skipMissing) {
+        boolean isMissing = chunks[i].isNA(r);
+        if(_skipMissing && isMissing) {
           row.predictors_bad = true;
+        } else {
+          int cid = getCategoricalId(i, isMissing ? _catNAFill[i] : (int) chunks[i].at8(r));
+          if (cid >= 0) row.binIds[row.nBins++] = cid;
         }
       }
     }
