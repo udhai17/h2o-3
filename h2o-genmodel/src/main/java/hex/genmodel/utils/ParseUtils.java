@@ -18,6 +18,7 @@ public class ParseUtils {
     public static Object tryParse(String input) {
         if (input.equals("true")) return true;
         if (input.equals("false")) return false;
+        if (input.equals("null")) return null;
 
         try { return Integer.parseInt(input); }
         catch (NumberFormatException ignored) {}

@@ -7,7 +7,6 @@ import deepwater.backends.RuntimeOptions;
 import deepwater.datasets.ImageDataSet;
 import hex.DataInfo;
 import hex.Model;
-import hex.genmodel.GenModel;
 import water.H2O;
 import water.Iced;
 import water.Key;
@@ -22,6 +21,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
+
+import static hex.genmodel.algos.DeepWaterMojo.createDeepWaterBackend;
 
 
 /**
@@ -225,7 +226,7 @@ final public class DeepWaterModelInfo extends Iced {
       }
 
       try {
-        _backend = GenModel.createDeepWaterBackend(parameters._backend.toString()); // new ImageTrain(_width, _height, _channels, _deviceID, (int)parameters.getOrMakeRealSeed(), _gpu);
+        _backend = createDeepWaterBackend(parameters._backend.toString()); // new ImageTrain(_width, _height, _channels, _deviceID, (int)parameters.getOrMakeRealSeed(), _gpu);
         ImageDataSet imageDataSet = getImageDataSet();
         _meanData = imageDataSet.getMeanData();
         RuntimeOptions opts = getRuntimeOptions();
@@ -331,7 +332,7 @@ final public class DeepWaterModelInfo extends Iced {
       return;
     }
     if (_backend ==null)
-      _backend = GenModel.createDeepWaterBackend(get_params()._backend.toString()); // new ImageTrain(_width, _height, _channels, _deviceID, (int)parameters.getOrMakeRealSeed(), _gpu);
+      _backend = createDeepWaterBackend(get_params()._backend.toString()); // new ImageTrain(_width, _height, _channels, _deviceID, (int)parameters.getOrMakeRealSeed(), _gpu);
 
     if (network==null) network = _network;
     if (parameters==null) parameters= _modelparams;

@@ -1270,6 +1270,8 @@ public abstract class Model<M extends Model<M,P,O>, P extends Model.Parameters, 
       writeln("algorithm = " + _parms.fullName());
       writeln("category = " + _output.getModelCategory());
       writeln("uuid = " + checksum());
+      writeln("supervised = " + (_output.isSupervised() ? "true" : "false"));
+      writeln("n_features = " + _output.nfeatures());
       writeln("n_classes = " + _output.nclasses());
       writeln("n_columns = " + _output._names.length);
       writeln("n_domains = " + n_categoricals);
