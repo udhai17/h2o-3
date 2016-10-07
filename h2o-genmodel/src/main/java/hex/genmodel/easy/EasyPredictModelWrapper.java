@@ -437,7 +437,11 @@ public class EasyPredictModelWrapper implements java.io.Serializable {
         Object o = data.get(dataColumnName);
         if (o instanceof String) {
           String s = (String) o;
-          value = Double.parseDouble(s);
+          try {
+            value = Double.parseDouble(s);
+          } catch(NumberFormatException nfe) {
+            throw new PredictException("Unable to parse value: " + s + ", from column: "+ dataColumnName + ", as Double; " + nfe.getMessage());
+          }
         }
         else if (o instanceof Double) {
           value = (Double) o;
