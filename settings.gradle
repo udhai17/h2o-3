@@ -28,6 +28,7 @@ apply plugin: 'scala-cross-build'
 scalaCrossCompile {
   targetVersions "2.10.4", "2.11.7"
   include 'h2o-scala'
+  include 'h2o-assembly-scala'
 }
 
 // Make structure flat and avoid annoying dummy modules
