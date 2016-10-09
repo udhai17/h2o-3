@@ -8,6 +8,9 @@ import deepwater.datasets.ImageDataSet;
 import hex.genmodel.MojoModel;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -98,10 +101,23 @@ public class DeepWaterMojo extends MojoModel {
   }
 
   static public BackendTrain createDeepWaterBackend(String backend) {
+    if ( backend.isEmpty() ){
+      backend = "mxnet"; //TODO: add configuration for default backend
+    }
     try {
       try {
         if (backend.equals("mxnet")) backend="deepwater.backends.mxnet.MXNetBackend";
-        return (BackendTrain)(Class.forName(backend).newInstance());
+        URLClassLoader child = null;
+        try {
+          child = new URLClassLoader( new URL[]{
+                  new URL("file:///home/fmilo/workspace/deepwater/mxnet/build/libs/deepwater.backends.mxnet-1.0-SNAPSHOT.jar")
+          },
+                 DeepWaterMojo.class.getClassLoader());
+        } catch (MalformedURLException e) {
+          e.printStackTrace();
+        }
+        Class classToLoad = Class.forName (backend, true, child);
+        return (BackendTrain)(classToLoad.newInstance());
       } catch (InstantiationException e) {
         e.printStackTrace();
       } catch (IllegalAccessException e) {
