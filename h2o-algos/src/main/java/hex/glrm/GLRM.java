@@ -399,11 +399,9 @@ public class GLRM extends ModelBuilder<GLRMModel, GLRMModel.GLRMParameters, GLRM
 
         // fix for PUBDEV-3528.  Copy content of fullFrm into dfrm for X, W
         int endIndex = _ncolX+_ncolA;
-        for (int index = _ncolA; index < endIndex; index++) {
-          int fullFrm_index = index+_ncolX;
-          dfrm.replace(index, fullFrm.vec(fullFrm_index));
-          dfrm.replace(fullFrm_index, fullFrm.vec(fullFrm_index));
-        }
+        for (int index = _ncolA; index < endIndex; index++)
+          dfrm.replace(index, fullFrm.vec(index+_ncolX));
+
       } else if (_parms._init == Initialization.PlusPlus) {  // Run k-means++ and set Y = resulting cluster centers, X = indicator matrix of assignments
         KMeansModel.KMeansParameters parms = new KMeansModel.KMeansParameters();
         parms._train = _parms._train;
