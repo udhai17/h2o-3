@@ -11,6 +11,7 @@ import water.nbhm.NonBlockingHashMap;
 import water.parser.Categorical;
 import water.parser.BufferedString;
 import water.util.ArrayUtils;
+import water.util.Log;
 
 import java.util.Arrays;
 
@@ -288,12 +289,15 @@ final class RollupStats extends Iced {
     if( vec.isString() ) computeHisto = false; // No histogram for string columns
     final Key rskey = vec.rollupStatsKey();
     RollupStats rs = getOrNull(vec,rskey);
-    if(rs == null || (computeHisto && !rs.hasHisto()))
-      fs.add(new RPC(rskey.home_node(),new ComputeRollupsTask(vec,computeHisto)).addCompleter(new H2OCallback() {
-        @Override public void callback(H2OCountedCompleter h2OCountedCompleter) {
+    if(rs == null || (computeHisto && !rs.hasHisto())) {
+      Log.info("(start) RollupStats for ", rskey);
+      fs.add(new RPC(rskey.home_node(), new ComputeRollupsTask(vec, computeHisto)).addCompleter(new H2OCallback() {
+        @Override
+        public void callback(H2OCountedCompleter h2OCountedCompleter) {
           DKV.get(rskey); // fetch new results via DKV to enable caching of the results.
         }
       }).call());
+    }
   }
 
   private static NonBlockingHashMap<Key,RPC> _pendingRollups = new NonBlockingHashMap<>();
@@ -308,6 +312,7 @@ final class RollupStats extends Iced {
         throw new IllegalArgumentException("Can not compute rollup stats while vec is being modified. (1)");
       // 1. compute only once
       try {
+        Log.info("(get) RollupStats for ", rskey);
         RPC rpcNew = new RPC(rskey.home_node(),new ComputeRollupsTask(vec, computeHisto));
         RPC rpcOld = _pendingRollups.putIfAbsent(rskey, rpcNew);
         if(rpcOld == null) {  // no prior pending task, need to send this one
@@ -376,6 +381,7 @@ final class RollupStats extends Iced {
 
     public ComputeRollupsTask(Vec v, boolean computeHisto){
       super((byte)(Thread.currentThread() instanceof H2O.FJWThr ? currThrPriority()+1 : H2O.MIN_HI_PRIORITY-3));
+      Log.info("(task) RollupStats for ", v.rollupStatsKey());
       _vecKey = v._key;
       _rsKey = v.rollupStatsKey();
       _computeHisto = computeHisto;
